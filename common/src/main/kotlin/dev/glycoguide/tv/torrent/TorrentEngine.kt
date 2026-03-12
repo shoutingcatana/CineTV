@@ -55,12 +55,22 @@ class TorrentEngine(private val getSettings: () -> TorrentSettings) {
                 val spClass = Class.forName("org.libtorrent4j.swig.settings_pack")
                 val sp = spClass.getDeclaredConstructor().newInstance()
                 val intSettingsClass = Class.forName("org.libtorrent4j.swig.settings_pack\$int_types")
+                val strSettingsClass = Class.forName("org.libtorrent4j.swig.settings_pack\$string_types")
 
                 fun setIntSetting(settingName: String, value: Int) {
                     try {
                         val field = intSettingsClass.getField(settingName)
                         val settingEnum = field.get(null)
                         spClass.getMethod("set_int", intSettingsClass, Int::class.java)
+                            .invoke(sp, settingEnum, value)
+                    } catch (_: Exception) {}
+                }
+
+                fun setStrSetting(settingName: String, value: String) {
+                    try {
+                        val field = strSettingsClass.getField(settingName)
+                        val settingEnum = field.get(null)
+                        spClass.getMethod("set_str", strSettingsClass, String::class.java)
                             .invoke(sp, settingEnum, value)
                     } catch (_: Exception) {}
                 }
@@ -75,6 +85,13 @@ class TorrentEngine(private val getSettings: () -> TorrentSettings) {
                 if (data.maxConnections > 0) {
                     setIntSetting("connections_limit", data.maxConnections)
                 }
+
+                // Add DHT bootstrap nodes for better peer/metadata discovery
+                setStrSetting("dht_bootstrap_nodes",
+                    "router.bittorrent.com:6881," +
+                    "dht.transmissionbt.com:6881," +
+                    "router.utorrent.com:6881," +
+                    "dht.libtorrent.org:25401")
 
                 val startWithSpMethod = smClass.getMethod("start", spClass)
                 startWithSpMethod.invoke(sm, sp)
@@ -131,13 +148,13 @@ class TorrentEngine(private val getSettings: () -> TorrentSettings) {
             try {
                 val smClass = sm::class.java
 
-                // Fetch magnet metadata (timeout 60s)
+                // Fetch magnet metadata (timeout 120s)
                 val fetchMethod = smClass.getMethod("fetchMagnet", String::class.java, Int::class.java, File::class.java)
-                val data = fetchMethod.invoke(sm, magnetUrl, 60, saveDir) as? ByteArray
+                val data = fetchMethod.invoke(sm, magnetUrl, 120, saveDir) as? ByteArray
 
                 if (data == null) {
                     stream.updateStatus {
-                        copy(state = TorrentState.ERROR, errorMessage = "Failed to fetch torrent metadata (timeout)")
+                        copy(state = TorrentState.ERROR, errorMessage = "Torrent-Metadaten konnten nicht geladen werden (Timeout). Prüfe deine Internetverbindung und ob der Torrent noch aktive Seeds hat.")
                     }
                     return@launch
                 }
