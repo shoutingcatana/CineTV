@@ -1,4 +1,4 @@
-# GlycoGuide TV
+# CineStream
 
 Desktop-Streaming-Client mit BitTorrent-Support – inspiriert von [CloudStream](https://github.com/recloudstream/cloudstream), aber für Linux/Windows/macOS Desktop.
 
@@ -41,7 +41,7 @@ Desktop-Streaming-Client mit BitTorrent-Support – inspiriert von [CloudStream]
 ## Architektur
 
 ```
-src/main/kotlin/dev/glycoguide/tv/
+src/main/kotlin/dev/cinestream/tv/
 ├── Main.kt                    # Entry Point
 ├── App.kt                     # Hauptnavigation
 ├── model/Models.kt            # Datenmodelle
@@ -101,7 +101,7 @@ com.example.MyProvider
 
 ### 3. Als JAR bauen und im Extensions-Ordner ablegen
 
-Standard: `~/.glycoguide-tv/extensions/`
+Standard: `~/.cinestream/extensions/`
 
 ## Tech Stack
 
@@ -118,4 +118,4 @@ Standard: `~/.glycoguide-tv/extensions/`
 
 ## Lizenz
 
-Privates Projekt – GlycoGuide
+Privates Projekt – CineStream
