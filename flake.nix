@@ -25,15 +25,15 @@
           ];
 
           buildInputs = with pkgs; [
-            xorg.libX11
-            xorg.libXtst
-            xorg.libXrender
-            xorg.libXext
-            xorg.libXi
-            xorg.libXrandr
-            xorg.libXcursor
-            xorg.libXfixes
-            xorg.libXScrnSaver
+            libx11
+            libxtst
+            libxrender
+            libxext
+            libxi
+            libxrandr
+            libxcursor
+            libxfixes
+            libxscrnsaver
             fontconfig
             freetype
             glib
@@ -71,15 +71,15 @@
             wrapProgram $out/bin/CineStream \
               --set JAVA_HOME "${jdk}" \
               --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [
-                pkgs.xorg.libX11
-                pkgs.xorg.libXtst
-                pkgs.xorg.libXrender
-                pkgs.xorg.libXext
-                pkgs.xorg.libXi
-                pkgs.xorg.libXrandr
-                pkgs.xorg.libXcursor
-                pkgs.xorg.libXfixes
-                pkgs.xorg.libXScrnSaver
+                pkgs.libx11
+                pkgs.libxtst
+                pkgs.libxrender
+                pkgs.libxext
+                pkgs.libxi
+                pkgs.libxrandr
+                pkgs.libxcursor
+                pkgs.libxfixes
+                pkgs.libxscrnsaver
                 pkgs.fontconfig
                 pkgs.freetype
                 pkgs.glib
@@ -95,7 +95,7 @@
 
           meta = with pkgs.lib; {
             description = "CineStream – Desktop Streaming Client mit BitTorrent-Support";
-            license = licenses.unfree;
+            license = licenses.mit;
             platforms = platforms.linux;
             mainProgram = "CineStream";
           };
