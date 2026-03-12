@@ -13,93 +13,60 @@
 
         jdk = pkgs.jdk17;
 
-        cinestream = pkgs.stdenv.mkDerivation {
-          pname = "cinestream";
-          version = "1.0.0";
+        runtimeLibs = with pkgs; [
+          libx11
+          libxtst
+          libxrender
+          libxext
+          libxi
+          libxrandr
+          libxcursor
+          libxfixes
+          libxscrnsaver
+          fontconfig
+          freetype
+          glib
+          gtk3
+          cairo
+          pango
+          gdk-pixbuf
+          atk
+          libGL
+        ];
 
-          src = ./.;
+        runtimeBins = with pkgs; [ mpv git ];
 
-          nativeBuildInputs = with pkgs; [
-            jdk
-            makeWrapper
-          ];
+        # Wrapper script that clones/updates the repo and runs via Gradle.
+        # Gradle + Maven deps are downloaded at runtime (not in the Nix sandbox).
+        cinestream = pkgs.writeShellScriptBin "CineStream" ''
+          set -euo pipefail
 
-          buildInputs = with pkgs; [
-            libx11
-            libxtst
-            libxrender
-            libxext
-            libxi
-            libxrandr
-            libxcursor
-            libxfixes
-            libxscrnsaver
-            fontconfig
-            freetype
-            glib
-            gtk3
-            cairo
-            pango
-            gdk-pixbuf
-            atk
-            libGL
-          ];
+          CACHE_DIR="''${XDG_CACHE_HOME:-$HOME/.cache}/cinestream"
+          REPO_DIR="$CACHE_DIR/repo"
 
-          # Gradle needs a writable home
-          GRADLE_USER_HOME = "/tmp/gradle-home";
+          export JAVA_HOME="${jdk}"
+          export PATH="${pkgs.lib.makeBinPath ([ jdk ] ++ runtimeBins)}:$PATH"
+          export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath runtimeLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
-          buildPhase = ''
-            export HOME="$TMPDIR"
-            export GRADLE_USER_HOME="$TMPDIR/gradle-home"
-            mkdir -p "$GRADLE_USER_HOME"
+          # Unset snap-related GTK vars that may conflict
+          unset GTK_PATH GTK_EXE_PREFIX GIO_MODULE_DIR GSETTINGS_SCHEMA_DIR 2>/dev/null || true
 
-            # Use system Java
-            export JAVA_HOME="${jdk}"
+          if [ ! -d "$REPO_DIR/.git" ]; then
+            echo "╔══════════════════════════════════════╗"
+            echo "║ CineStream – Erster Start            ║"
+            echo "║ Lade Repository herunter...           ║"
+            echo "╚══════════════════════════════════════╝"
+            mkdir -p "$CACHE_DIR"
+            ${pkgs.git}/bin/git clone --depth 1 https://github.com/shoutingcatana/CineTV.git "$REPO_DIR"
+          else
+            echo "Aktualisiere CineStream..."
+            (cd "$REPO_DIR" && ${pkgs.git}/bin/git pull --ff-only 2>/dev/null) || true
+          fi
 
-            # Build the distribution archive (creates a tar.gz with libs + start script)
-            chmod +x gradlew
-            ./gradlew --no-daemon createDistributable
-          '';
-
-          installPhase = ''
-            mkdir -p $out
-
-            # Copy the distributable
-            cp -r build/compose/binaries/main/app/CineStream/* $out/
-
-            # Wrap the launcher to set up the environment
-            wrapProgram $out/bin/CineStream \
-              --set JAVA_HOME "${jdk}" \
-              --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [
-                pkgs.libx11
-                pkgs.libxtst
-                pkgs.libxrender
-                pkgs.libxext
-                pkgs.libxi
-                pkgs.libxrandr
-                pkgs.libxcursor
-                pkgs.libxfixes
-                pkgs.libxscrnsaver
-                pkgs.fontconfig
-                pkgs.freetype
-                pkgs.glib
-                pkgs.gtk3
-                pkgs.cairo
-                pkgs.pango
-                pkgs.gdk-pixbuf
-                pkgs.atk
-                pkgs.libGL
-              ]}" \
-              --prefix PATH : "${pkgs.lib.makeBinPath [ pkgs.mpv ]}"
-          '';
-
-          meta = with pkgs.lib; {
-            description = "CineStream – Desktop Streaming Client mit BitTorrent-Support";
-            license = licenses.mit;
-            platforms = platforms.linux;
-            mainProgram = "CineStream";
-          };
-        };
+          cd "$REPO_DIR"
+          chmod +x gradlew
+          exec ./gradlew --no-daemon run
+        '';
       in
       {
         packages = {
@@ -117,10 +84,11 @@
             jdk
             mpv
             gradle
-          ];
+          ] ++ runtimeLibs;
 
           shellHook = ''
             export JAVA_HOME="${jdk}"
+            export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath runtimeLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
             echo "CineStream dev shell – Java 17 + mpv + Gradle ready"
           '';
         };
