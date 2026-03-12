@@ -23,6 +23,9 @@
           libxcursor
           libxfixes
           libxscrnsaver
+          libxinerama
+          libxcomposite
+          libxdamage
           fontconfig
           freetype
           glib
@@ -31,7 +34,11 @@
           pango
           gdk-pixbuf
           atk
+          dbus
           libGL
+          libglvnd
+          mesa
+          vulkan-loader
         ];
 
         runtimeBins = with pkgs; [ mpv git ];
@@ -47,6 +54,12 @@
           export JAVA_HOME="${jdk}"
           export PATH="${pkgs.lib.makeBinPath ([ jdk ] ++ runtimeBins)}:$PATH"
           export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath runtimeLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+          # OpenGL / Mesa driver discovery (non-NixOS systems have drivers in /usr/lib)
+          NIX_MESA_DRIVERS="${pkgs.mesa}/lib/dri"
+          SYS_DRIVERS="/usr/lib/x86_64-linux-gnu/dri:/usr/lib/dri:/usr/lib64/dri"
+          export LIBGL_DRIVERS_PATH="''${NIX_MESA_DRIVERS}:''${SYS_DRIVERS}''${LIBGL_DRIVERS_PATH:+:$LIBGL_DRIVERS_PATH}"
+          export __EGL_VENDOR_LIBRARY_DIRS="${pkgs.mesa}/share/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d"
 
           # Unset snap-related GTK vars that may conflict
           unset GTK_PATH GTK_EXE_PREFIX GIO_MODULE_DIR GSETTINGS_SCHEMA_DIR 2>/dev/null || true
@@ -89,6 +102,10 @@
           shellHook = ''
             export JAVA_HOME="${jdk}"
             export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath runtimeLibs}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+            NIX_MESA_DRIVERS="${pkgs.mesa}/lib/dri"
+            SYS_DRIVERS="/usr/lib/x86_64-linux-gnu/dri:/usr/lib/dri:/usr/lib64/dri"
+            export LIBGL_DRIVERS_PATH="''${NIX_MESA_DRIVERS}:''${SYS_DRIVERS}''${LIBGL_DRIVERS_PATH:+:$LIBGL_DRIVERS_PATH}"
+            export __EGL_VENDOR_LIBRARY_DIRS="${pkgs.mesa}/share/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d"
             echo "CineStream dev shell – Java 17 + mpv + Gradle ready"
           '';
         };
