@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import dev.glycoguide.tv.android.AndroidSettings
+import dev.glycoguide.tv.android.AndroidSettingsData
 import dev.glycoguide.tv.android.isAndroidTv
 import dev.glycoguide.tv.android.player.AndroidPlayerManager
 import dev.glycoguide.tv.android.provider.AndroidVidSrcProvider
@@ -148,6 +149,12 @@ fun GlycoGuideApp(context: Context) {
                             onClick = { navigateTo(Screen.Search) },
                         )
                         NavigationBarItem(
+                            icon = { Icon(Icons.Default.Extension, "Extensions") },
+                            label = { Text("Extensions") },
+                            selected = currentScreen is Screen.Extensions,
+                            onClick = { navigateTo(Screen.Extensions) },
+                        )
+                        NavigationBarItem(
                             icon = { Icon(Icons.Default.Settings, "Settings") },
                             label = { Text("Einstellungen") },
                             selected = currentScreen is Screen.Settings,
@@ -183,7 +190,7 @@ fun GlycoGuideApp(context: Context) {
                         playerManager = playerManager,
                         onBack = { goBack() },
                     )
-                    is Screen.Extensions -> {} // Not used on Android
+                    is Screen.Extensions -> ExtensionsScreen(providerManager)
                     is Screen.Settings -> SettingsScreen(settings) { goBack() }
                 }
             }
@@ -659,42 +666,174 @@ fun SettingsScreen(settings: dev.glycoguide.tv.android.AndroidSettings, onBack: 
         Text("Einstellungen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
 
-        // VPN Warning switch
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("VPN-Warnung", fontWeight = FontWeight.SemiBold)
-                    Text("Warnung vor Torrent-Streams anzeigen", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = data.showVpnWarning, onCheckedChange = {
-                    settings.update { copy(showVpnWarning = it) }
-                    data = settings.data
-                })
-            }
-        }
-
+        // === Torrent Settings ===
+        Text("Torrent", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(12.dp))
 
-        // Seed after download
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth()) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Seeden nach Download", fontWeight = FontWeight.SemiBold)
-                    Text("Torrent nach Fertigstellung weiter hochladen", style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = data.seedAfterDownload, onCheckedChange = {
-                    settings.update { copy(seedAfterDownload = it) }
+        // Buffer size
+        OutlinedTextField(
+            value = data.bufferSizeMB.toString(),
+            onValueChange = { text ->
+                text.toIntOrNull()?.let {
+                    settings.update { copy(bufferSizeMB = it) }
                     data = settings.data
-                })
+                }
+            },
+            label = { Text("Buffer-Größe (MB)") },
+            supportingText = { Text("Wie viel gepuffert wird bevor der Player startet") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
+
+        // Max download speed
+        OutlinedTextField(
+            value = data.maxDownloadSpeedKBps.toString(),
+            onValueChange = { text ->
+                text.toIntOrNull()?.let {
+                    settings.update { copy(maxDownloadSpeedKBps = it) }
+                    data = settings.data
+                }
+            },
+            label = { Text("Max Download-Speed (KB/s, 0 = unbegrenzt)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
+
+        // Max upload speed
+        OutlinedTextField(
+            value = data.maxUploadSpeedKBps.toString(),
+            onValueChange = { text ->
+                text.toIntOrNull()?.let {
+                    settings.update { copy(maxUploadSpeedKBps = it) }
+                    data = settings.data
+                }
+            },
+            label = { Text("Max Upload-Speed (KB/s, 0 = unbegrenzt)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
+
+        // Max connections
+        OutlinedTextField(
+            value = data.maxConnections.toString(),
+            onValueChange = { text ->
+                text.toIntOrNull()?.let {
+                    settings.update { copy(maxConnections = it) }
+                    data = settings.data
+                }
+            },
+            label = { Text("Max Verbindungen") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
+
+        // Seed after download switch
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Nach Download weiter seeden", style = MaterialTheme.typography.bodyMedium)
             }
+            Switch(checked = data.seedAfterDownload, onCheckedChange = {
+                settings.update { copy(seedAfterDownload = it) }
+                data = settings.data
+            })
         }
 
         Spacer(Modifier.height(16.dp))
 
+        // === Player Settings ===
+        Text("Video Player", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = data.playerPackage,
+            onValueChange = {
+                settings.update { copy(playerPackage = it) }
+                data = settings.data
+            },
+            label = { Text("Player-App Package") },
+            supportingText = { Text("Leer = System-Standard (z.B. org.videolan.vlc)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // === Privacy Settings ===
+        Text("Datenschutz", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(12.dp))
+
+        // VPN Warning switch
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("VPN-Warnung", style = MaterialTheme.typography.bodyMedium)
+                Text("Warnung vor Torrent-Streams anzeigen", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = data.showVpnWarning, onCheckedChange = {
+                settings.update { copy(showVpnWarning = it) }
+                data = settings.data
+            })
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        // Reset button
+        OutlinedButton(
+            onClick = {
+                settings.update { AndroidSettingsData() }
+                data = settings.data
+            },
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+        ) {
+            Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Auf Standard zurücksetzen")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // About
         Text("Über", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth()) {
@@ -702,6 +841,125 @@ fun SettingsScreen(settings: dev.glycoguide.tv.android.AndroidSettings, onBack: 
                 Text("CineStream v1.0.0", fontWeight = FontWeight.SemiBold)
                 Text("Desktop & Mobile Streaming Client", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+// ──────────────────────────── Extensions Screen ────────────────────────────
+
+@Composable
+fun ExtensionsScreen(providerManager: ProviderManager) {
+    val providers by providerManager.providers.collectAsState()
+    val loadErrors by providerManager.loadErrors.collectAsState()
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+    ) {
+        Text("Extensions", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text("Verwalte Content-Provider für Film- und Serienquellen",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Spacer(Modifier.height(16.dp))
+
+        // Info card
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Provider werden beim App-Start automatisch geladen. " +
+                    "Auf der Desktop-Version können zusätzliche JAR-Extensions installiert werden.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        // Load errors
+        if (loadErrors.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            loadErrors.forEach { error ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                ) {
+                    Text(error, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(12.dp))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        Spacer(Modifier.height(12.dp))
+
+        Text("Installierte Provider (${providers.size})",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground)
+        Spacer(Modifier.height(12.dp))
+
+        if (providers.isEmpty()) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Extension, null, modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Keine Provider installiert", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            providers.forEach { provider ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Extension, null,
+                            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(provider.name, style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold)
+                            Text(provider.description, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(top = 4.dp)) {
+                                Text(provider.language.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary)
+                                provider.supportedTypes.forEach { type ->
+                                    Text(type.name, style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                        if (provider.id == "demo" || provider.id == "vidsrc") {
+                            Box(
+                                modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                            ) {
+                                Text("Built-in", style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary)
+                            }
+                        } else {
+                            IconButton(onClick = { providerManager.removeProvider(provider.id) }) {
+                                Icon(Icons.Default.Delete, "Entfernen",
+                                    tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
