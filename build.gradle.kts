@@ -29,6 +29,7 @@ val libtorrentPlatform = when {
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":cloudstream-compat"))
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)

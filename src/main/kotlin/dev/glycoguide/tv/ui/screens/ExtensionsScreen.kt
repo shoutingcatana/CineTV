@@ -102,12 +102,16 @@ fun ExtensionsScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
+                        "CineStream Extensions:\n" +
                         "1. Implementiere das ContentProvider-Interface\n" +
                         "2. Erstelle META-INF/services/dev.glycoguide.tv.provider.ContentProvider\n" +
                         "3. Trage den vollqualifizierten Klassennamen dort ein\n" +
                         "4. Baue als JAR und lege es im Extensions-Ordner ab:\n" +
                         "   ${settings.data.extensionsDirectory}\n" +
-                        "5. Klicke auf 'Neu laden'",
+                        "5. Klicke auf 'Neu laden'\n\n" +
+                        "CloudStream3-Kompatibilität:\n" +
+                        "CloudStream-Extensions (als JVM-JAR repackaged) werden ebenfalls unterstützt.\n" +
+                        "Lege .jar-Dateien mit CloudStream MainAPI-Klassen im selben Ordner ab.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

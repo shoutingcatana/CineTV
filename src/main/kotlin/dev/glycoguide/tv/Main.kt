@@ -9,6 +9,8 @@ import androidx.compose.ui.window.rememberWindowState
 import dev.glycoguide.tv.model.TorrentSettings
 import dev.glycoguide.tv.player.PlayerManager
 import dev.glycoguide.tv.provider.ProviderManager
+import dev.glycoguide.tv.cloudstream.CloudStreamExtensionLoader
+import dev.glycoguide.tv.cloudstream.CloudStreamProviderAdapter
 import dev.glycoguide.tv.torrent.TorrentEngine
 import dev.glycoguide.tv.ui.theme.AppTheme
 import dev.glycoguide.tv.util.AppSettings
@@ -18,7 +20,16 @@ fun main() = application {
     val windowState = rememberWindowState(width = 1280.dp, height = 800.dp)
 
     val settings = remember { AppSettings.load() }
-    val providerManager = remember { ProviderManager() }
+    val providerManager = remember {
+        val csLoader = CloudStreamExtensionLoader()
+        ProviderManager().apply {
+            cloudStreamLoader = { jarPath ->
+                val result = csLoader.loadExtension(jarPath)
+                val providers = result.apis.map { CloudStreamProviderAdapter(it) }
+                providers to result.errors
+            }
+        }
+    }
     val torrentEngine = remember {
         TorrentEngine {
             val d = settings.data

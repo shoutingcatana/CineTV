@@ -15,6 +15,9 @@ class ProviderManager {
     private val _loadErrors = MutableStateFlow<List<String>>(emptyList())
     val loadErrors: StateFlow<List<String>> = _loadErrors
 
+    /** Callback for loading CloudStream extensions — set by the app module */
+    var cloudStreamLoader: ((Path) -> Pair<List<ContentProvider>, List<String>>)? = null
+
     init {
         // Register built-in demo provider
         registerProvider(DemoProvider())
@@ -43,9 +46,21 @@ class ProviderManager {
         dirPath.listDirectoryEntries("*.jar").forEach { jarPath ->
             loadExtension(jarPath)
         }
+
+        // Also try loading CloudStream extensions
+        cloudStreamLoader?.let { loader ->
+            dirPath.listDirectoryEntries("*.cs3.jar").forEach { jarPath ->
+                val (providers, errors) = loader(jarPath)
+                providers.forEach { registerProvider(it) }
+                if (errors.isNotEmpty()) {
+                    _loadErrors.value = _loadErrors.value + errors
+                }
+            }
+        }
     }
 
     fun loadExtension(jarPath: Path) {
+        // First try native CineStream extension (ServiceLoader)
         try {
             val classLoader = URLClassLoader(
                 arrayOf(jarPath.toUri().toURL()),
@@ -61,14 +76,24 @@ class ProviderManager {
                 }
             }
 
-            if (!loaded) {
-                _loadErrors.value = _loadErrors.value +
-                    "No providers found in ${jarPath.fileName}. Make sure META-INF/services is configured."
+            if (loaded) return
+        } catch (_: Exception) {}
+
+        // Then try CloudStream extension
+        cloudStreamLoader?.let { loader ->
+            val (providers, errors) = loader(jarPath)
+            if (providers.isNotEmpty()) {
+                providers.forEach { registerProvider(it) }
+                return
             }
-        } catch (e: Exception) {
-            _loadErrors.value = _loadErrors.value +
-                "Failed to load ${jarPath.fileName}: ${e.message}"
+            if (errors.isNotEmpty()) {
+                _loadErrors.value = _loadErrors.value + errors
+                return
+            }
         }
+
+        _loadErrors.value = _loadErrors.value +
+            "No providers found in ${jarPath.fileName}. Weder CineStream- noch CloudStream-Provider gefunden."
     }
 
     suspend fun searchAll(query: String, page: Int = 1): List<Pair<ContentProvider, SearchResult>> {

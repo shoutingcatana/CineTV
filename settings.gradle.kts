@@ -10,6 +10,7 @@ pluginManagement {
 rootProject.name = "CineStream"
 
 include(":common")
+include(":cloudstream-compat")
 include(":extensions:vidsrc-provider")
 
 // Include Android module only when Android SDK is available
